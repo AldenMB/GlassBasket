@@ -1,34 +1,42 @@
 import cadquery as cq
 from template import length, width, height, taper
 
-glass_thickness = 4
+glass_thickness = 2.25
+base_thickness = 3.2
 corner_radius = 20
-fillet = 2
+fillet = glass_thickness
 
 prism = cq.Workplane().rect(width, length).extrude(-height, taper=taper)
 
-shell = prism.faces(">Z").shell(3 * glass_thickness)
+shell = (
+    prism.faces(">Z")
+    .shell(3 * glass_thickness, kind="intersection")
+    .faces("<Z")
+    .wires()
+    .toPending()
+    .extrude(-3 * (base_thickness - glass_thickness), taper=taper)
+    .fillet(fillet)
+)
 
 
-def face2pane(face):
+def face2pane(face, thickness=glass_thickness):
     return (
         face.wires()
         .tag("face")
         .toPending()
         .workplane()
-        .extrude(2 * glass_thickness, combine=False)
+        .extrude(2 * thickness, combine=False)
         .wires(tag="face")
         .toPending()
         .workplane()
-        .cutBlind(glass_thickness)
+        .cutBlind(thickness)
     )
 
 
-panes = {side: face2pane(prism.faces(side)) for side in ">X <X >Y <Y <Z".split()}
+panes = {side: face2pane(prism.faces(side)) for side in ">X <X >Y <Y".split()}
+panes["<Z"] = face2pane(prism.faces("<Z"), thickness=base_thickness)
 
-corners = (
-    prism.vertices().sphere(corner_radius, combine=False).intersect(shell).fillet(fillet)
-)
+corners = prism.vertices().sphere(corner_radius, combine=False).intersect(shell)
 
 for name, pane in panes.items():
     corners = corners.cut(pane)

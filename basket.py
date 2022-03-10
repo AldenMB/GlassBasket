@@ -1,14 +1,6 @@
 import cadquery as cq
-import math
+from template import length, width, height, taper
 
-bottom_length = 180
-bottom_width = 140
-height = 50
-taper = 30
-margin = 2 * height * math.tan(math.radians(taper))
-
-length = bottom_length + margin
-width = bottom_width + margin
 glass_thickness = 4
 corner_radius = 20
 fillet = 2
@@ -35,7 +27,7 @@ def face2pane(face):
 panes = {side: face2pane(prism.faces(side)) for side in ">X <X >Y <Y <Z".split()}
 
 corners = (
-    prism.vertices().sphere(corner_radius).intersect(shell).faces(">Z").fillet(fillet)
+    prism.vertices().sphere(corner_radius, combine=False).intersect(shell).fillet(fillet)
 )
 
 for name, pane in panes.items():
